@@ -1,5 +1,6 @@
 import userModel from '../model/user.model.js';
 import bcrypt from 'bcryptjs';
+import { generateToken } from '../utils/auth.utils.js';
 
 export const registerUser = async (req, res) => {
     try {
@@ -26,6 +27,16 @@ export const registerUser = async (req, res) => {
             passwordHashed: await bcrypt.hash(password, 10);
         })
 
+        const { accessToekn, refreshToken } = generateToken({ userId: user._id, role: user.role })
+
+        await userModel.findByIdAndUpdate(user._id, {
+            refreshToken
+        })
+
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true
+        })
+
         res.status(200).json({
             success: true,
             message: "User registered successfully",
@@ -34,7 +45,8 @@ export const registerUser = async (req, res) => {
                     id: user._id,
                     name: user.name,
                     email: user.email
-                }
+                },
+                accessToekn
             }
         })
     } catch (error) {
