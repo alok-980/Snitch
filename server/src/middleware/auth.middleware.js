@@ -4,16 +4,16 @@ export const authenticate = async (req, res, next) => {
     try {
         const accessToken = req.headers.authorization;
 
-        if (!accessToken || !accessToken.startWith("Bearer")) {
+        if (!accessToken || !accessToken.startsWith("Bearer ")) {
             return res.status(400).json({
                 success: false,
                 message: "Token required"
             })
         }
 
-        accessToken = accessToken.split(" ")[1];
+        const token = accessToken.split(" ")[1];
 
-        const decoded = await verifyAccessToken(accessToken);
+        const decoded = await verifyAccessToken(token);
 
         req.user = decoded;
 
