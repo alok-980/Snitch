@@ -27,7 +27,7 @@ const productSchema = new mongoose.Schema({
         }
     },
 
-    prices: {
+    price: {
         amount: {
             type: Number,
             required: true
@@ -42,7 +42,7 @@ const productSchema = new mongoose.Schema({
     sizes: [
         {
             size: {
-                type: Number,
+                type: String,
                 required: true,
                 enum: ["XS", "S", "M", "L", "XL", "XXL"]
             },
@@ -58,7 +58,7 @@ const productSchema = new mongoose.Schema({
     seller: {
         type: mongoose.Types.ObjectId,
         ref: "users",
-        required: ture
+        required: true
     },
 
     published: {
