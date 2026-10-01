@@ -1,6 +1,6 @@
 import userModel from '../model/user.model.js';
 import bcrypt from 'bcryptjs';
-import { generateToken } from '../utils/auth.utils.js';
+import { generateToken, verifyRefreshToken } from '../utils/auth.utils.js';
 
 export const registerUser = async (req, res) => {
     try {
@@ -44,7 +44,8 @@ export const registerUser = async (req, res) => {
                 user: {
                     id: user._id,
                     name: user.name,
-                    email: user.email
+                    email: user.email,
+                    role: user.role
                 },
                 accessToekn
             }
@@ -97,7 +98,8 @@ export const loginUser = async (req, res) => {
                 user: {
                     id: user._id,
                     name: user.name,
-                    email: user.email
+                    email: user.email,
+                    role: user.role
                 },
                 accessToekn
             }
@@ -107,6 +109,109 @@ export const loginUser = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Internal server error"
+        })
+    }
+}
+
+export const refresh = async (req, res) => {
+    try {
+        const refreshToken = req.cookies.refreshToken;
+
+        if (!refreshToken) {
+            return res.status(400).json({
+                success: false,
+                message: "Refresh token missing, Please Login again."
+            })
+        }
+
+        const decoded = await verifyRefreshToken(refreshToken);
+
+        if (!decoded) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or expire token."
+            })
+        }
+
+        const { id } = decoded;
+
+        const user = await userModel.findById(id);
+
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or expire token."
+            })
+        }
+
+        if (refreshToken !== user.refreshToken) {
+            await userModel.findByIdAndUpdate(user._id, {
+                refreshToken: null
+            })
+
+            res.cookie("refreshToken", "", { httpOnly: true })
+
+            return res.status(401).json({
+                success: false,
+                message: "Refresh token mismatch, Please login again."
+            })
+        }
+
+        const { accessToekn, refreshToken: newRefreshToken } = generateToken({ userId: user._id, role: user.role })
+
+        await userModel.findByIdAndUpdate(user._id, {
+            refreshToken: newRefreshToken
+        })
+
+        res.cookie("refreshToken", newRefreshToken, {
+            httpOnly: true
+        })
+
+        res.status(200).json({
+            success: true,
+            message: "Token rotated successfully",
+            data: {
+                user: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role
+                },
+                accessToekn
+            }
+        })
+    } catch (error) {
+        console.error("Refresh token API error:", error.message);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        })
+    }
+}
+
+export const me = async (req, res) => {
+    try {
+        const { id } = req.user;
+
+        const user = await userModel.findById(id);
+
+        res.status(200).json({
+            success: true,
+            message: "User data fetched successfully",
+            data: {
+                user: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role
+                }
+            }
+        })
+    } catch (error) {
+        console.log("Me API error:", error.message);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error."
         })
     }
 }
